@@ -117,7 +117,6 @@ module.exports = async () => {
               options: { url: false },
               loader: "css-loader",
             },
-            // { loader: "postcss-loader" },
             {
               options: { sourceMap: true },
               loader: "sass-loader",
@@ -127,6 +126,7 @@ module.exports = async () => {
         },
       ],
     },
+    watch: true,
     entry: entries,
     devServer: {
       port: 3000,
