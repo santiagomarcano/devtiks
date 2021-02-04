@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "webpack --mode=production --config ./generator/webpack.config.js"
+    "build": "webpack --mode=production",
+    "dev": "nodemon",
+    "start": "nodemon"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +25,7 @@
     "html-webpack-plugin": "^5.0.0",
     "marked": "^1.2.8",
     "mini-css-extract-plugin": "^1.3.5",
+    "nodemon": "^2.0.7",
     "prettier": "2.2.1",
     "sass-loader": "^10.1.1",
     "style-loader": "^2.0.0",

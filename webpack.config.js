@@ -1,11 +1,12 @@
 const fs = require("fs");
+const webpack = require('webpack')
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CopyPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
-const MDParser = require("./MDParser")
-const walk = require('./walk')
+const MDParser = require("./generator/MDParser")
+const walk = require('./generator/walk')
 
 const tree = {}
 
@@ -29,7 +30,7 @@ async function getHTMLPluginInstance(pageName) {
     }
     let filename = pageName.split('pages')[1].split(path.sep)
     filename[filename.length - 1] = filename[filename.length - 1].split('.')[0]
-    filename = `${filename.join('/')}/index.html`
+    filename =`${filename.join(path.sep)}${path.sep}index.html`
     if (data.path) {
       filename = `./${data.path}/index.html`
     }
@@ -39,6 +40,7 @@ async function getHTMLPluginInstance(pageName) {
       body: html,
       templateParameters: data,
       chunks: data.scripts || ['index'],
+      inject: true,
     });
   } catch (err) {
     console.log(err)
@@ -65,19 +67,23 @@ async function getPages() {
       pages: htmlPlugins,
       entries,
     }
+    // return htmlPlugins
   } catch (err) {
     console.log(err);
   }
 }
-
+console.log(path.resolve(__dirname, "dist/"))
 module.exports = async () => {
-  let { entries, pages } = await getPages()
+  const { pages, entries } = await getPages()
+  console.log(pages)
   for (let page of pages) {
     page.userOptions.templateParameters.tree = tree
   }
+  // console.log(pages)
   return {
     plugins: [
-      new CleanWebpackPlugin(),
+      new webpack.HotModuleReplacementPlugin(),
+      new CleanWebpackPlugin({ cleanStaleWebpackAssets: false }),
       new CopyPlugin({
         patterns: [
           {
@@ -93,7 +99,7 @@ module.exports = async () => {
       ...pages,
     ],
     output: {
-      path: path.join(process.cwd(), "dist"),
+      path: path.join(__dirname, '../', "dist"),
       publicPath: '/',
       filename: "[name].js",
     },
@@ -126,11 +132,20 @@ module.exports = async () => {
         },
       ],
     },
-    watch: true,
     entry: entries,
     devServer: {
       port: 3000,
-      contentBase: path.join(__dirname, "./dist"),
+      contentBase: path.resolve(__dirname, "dist/"),
+      writeToDisk: (filePath) => {
+        console.log(filePath)
+        return path.resolve(__dirname, 'dist')
+      },
+      // historyApiFallback: {
+      //   index: '../dist/'
+      // },
+      // compress: true,
+      // publicPath: '/'
     },
+    // stats: 'detailed'
   };
 };
