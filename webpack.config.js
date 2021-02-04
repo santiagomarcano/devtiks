@@ -30,13 +30,16 @@ async function getHTMLPluginInstance(pageName) {
     }
     let filename = pageName.split('pages')[1].split(path.sep)
     filename[filename.length - 1] = filename[filename.length - 1].split('.')[0]
-    filename =`${filename.join(path.sep)}${path.sep}index.html`
+    filename = path.join(process.cwd(), 'dist', filename.join(path.sep), 'index.html')
     if (data.path) {
       filename = `./${data.path}/index.html`
     }
+    if (name.includes('index')) {
+      filename = path.join(process.cwd(), 'dist', 'index.html')
+    }
     return new HtmlWebpackPlugin({
       template: path.resolve(process.cwd(), "src", "templates", `${data.template}.ejs`),
-      filename: name.includes('index') ? 'index.html' : filename,
+      filename,
       body: html,
       templateParameters: data,
       chunks: data.scripts || ['index'],
@@ -75,7 +78,6 @@ async function getPages() {
 console.log(path.resolve(__dirname, "dist/"))
 module.exports = async () => {
   const { pages, entries } = await getPages()
-  console.log(pages)
   for (let page of pages) {
     page.userOptions.templateParameters.tree = tree
   }
