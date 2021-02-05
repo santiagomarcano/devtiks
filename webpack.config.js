@@ -14,17 +14,21 @@ function flat(arr) {
   return arr.reduce((acc, val) => Array.isArray(val) ? acc.concat(flat(val)) : acc.concat(val), []);
 }
 
-async function getHTMLPluginInstance(pageName) {
+async function getHTMLPluginOptions(pageName) {
   if (typeof pageName !== 'string') {
-    return Promise.all(pageName.map(getHTMLPluginInstance))
+    return Promise.all(pageName.map(getHTMLPluginOptions))
   }
   const [name] = pageName.split(".");
   try {
     const mdParser = new MDParser({
       path: path.resolve(process.cwd(), "src", "pages", pageName)
     })
+    let pagePath = pageName.split('pages')[1].split(path.sep)
     const { data, html } = await mdParser.run();
-    tree[pageName.replace(/^.*[\\\/]/, '').split('.')[0]] = data
+    tree[pageName.replace(/^.*[\\\/]/, '').split('.')[0]] = {
+      ...data,
+      route: pagePath.join('/').split('.')[0]
+    }
     if (!data.template) {
       throw 'template is estrictly needed'
     }
@@ -37,14 +41,17 @@ async function getHTMLPluginInstance(pageName) {
     if (name.includes('index')) {
       filename = path.join(process.cwd(), 'dist', 'index.html')
     }
-    return new HtmlWebpackPlugin({
+    return {
       template: path.resolve(process.cwd(), "src", "templates", `${data.template}.ejs`),
       filename,
       body: html,
-      templateParameters: data,
+      templateParameters: {
+        ...data,
+        route: pagePath.join('/').split('.')[0]
+      },
       chunks: data.scripts || ['index'],
       inject: true,
-    });
+    };
   } catch (err) {
     console.log(err)
     return err
@@ -64,7 +71,9 @@ async function getEntries() {
 async function getPages() {
   try {
     const pages = await walk(path.join(process.cwd(), "src", "pages"));
-    const htmlPlugins = flat(await Promise.all(pages.map(getHTMLPluginInstance)))
+    const htmlPluginsConfig = flat(await Promise.all(pages.map(getHTMLPluginOptions)))
+    const htmlPlugins = htmlPluginsConfig
+      .map(config => new HtmlWebpackPlugin({ ...config, templateParameters: { tree, ...config.templateParameters } }))
     const entries = await getEntries()
     return {
       pages: htmlPlugins,
@@ -75,17 +84,13 @@ async function getPages() {
     console.log(err);
   }
 }
-console.log(path.resolve(__dirname, "dist/"))
+
 module.exports = async () => {
   const { pages, entries } = await getPages()
-  for (let page of pages) {
-    page.userOptions.templateParameters.tree = tree
-  }
-  // console.log(pages)
   return {
     plugins: [
-      new webpack.HotModuleReplacementPlugin(),
-      new CleanWebpackPlugin({ cleanStaleWebpackAssets: false }),
+      // new webpack.HotModuleReplacementPlugin(),
+      new CleanWebpackPlugin(),
       new CopyPlugin({
         patterns: [
           {
@@ -101,7 +106,7 @@ module.exports = async () => {
       ...pages,
     ],
     output: {
-      path: path.join(__dirname, '../', "dist"),
+      path: path.join(__dirname, "dist"),
       publicPath: '/',
       filename: "[name].js",
     },
@@ -113,40 +118,24 @@ module.exports = async () => {
           exclude: /node_modules/u,
         },
         {
+          test: /\.css$/,
           use: [
-            { loader: "style-loader" },
-            {
-              options: {
-                esModule: false,
-              },
-              loader: MiniCssExtractPlugin.loader,
-            },
-            {
-              options: { url: false },
-              loader: "css-loader",
-            },
-            {
-              options: { sourceMap: true },
-              loader: "sass-loader",
-            },
+            process.env.NODE_ENV === 'production' ? MiniCssExtractPlugin.loader : "style-loader",
+            { loader: "css-loader", options: { importLoaders: 1 } },
+            "postcss-loader",
           ],
-          test: /\.scss$/u,
+        },
+        {
+          test: /\.(woff|woff2|eot|ttf|otf)$/i,
+          type: 'asset/resource',
         },
       ],
     },
     entry: entries,
     devServer: {
       port: 3000,
+      host: '0.0.0.0',
       contentBase: path.resolve(__dirname, "dist/"),
-      writeToDisk: (filePath) => {
-        console.log(filePath)
-        return path.resolve(__dirname, 'dist')
-      },
-      // historyApiFallback: {
-      //   index: '../dist/'
-      // },
-      // compress: true,
-      // publicPath: '/'
     },
     // stats: 'detailed'
   };

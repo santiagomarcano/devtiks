@@ -6,10 +6,21 @@
   <title><%= htmlWebpackPlugin.options.title %></title>
 </head>
 <body>
-  <%= htmlWebpackPlugin.options.body %>
-  <% parameter.forEach(function(num){ %>
-    <div><%= num %></div>
-  <% }); %>
-alfosndu  ycahachish
+  <nav>DEVTIKS</nav>
+  <main>
+    <aside>
+      hola soy aside
+    </aside>
+    <section>
+      <h2>posts</h2>
+      <ul>
+        <% Object.keys(tree).forEach((page) => { %>
+          <% if (tree[page].route.includes('posts/')) { %>
+            <li><%= tree[page].route %></li>
+          <% } %>
+        <% }); %>
+      </ul>
+    </section>
+  </main>
 </body>
 </html>

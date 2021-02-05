@@ -1,5 +1,5 @@
 {
   "watch": ["webpack/webpack.config.js", "src/pages"],
-  "exec": "webpack serve --mode=development",
+  "exec": "env NODE_ENV=development webpack serve --mode=development",
   "ext": "md"
 }
